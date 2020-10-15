@@ -1,0 +1,91 @@
+/**************************** REXX *********************************/
+/* This exec illustrates the use of "EXECIO 0 ..." to open, empty, */
+/* or close a file. It reads records from file indd, allocated     */
+/* to 'sams.input.dataset', and writes selected records to file    */
+/* outdd, allocated to 'sams.output.dataset'. In this example, the */
+/* data set 'smas.input.dataset' contains variable-length records  */
+/* (RECFM = VB).                                                   */
+/*******************************************************************/
+/*"FREE FI(outdd)"*/
+/*"FREE FI(indd)"*/
+"ALLOC FI(outdd) DA('Z00346.OUTPUT(CUST16)') SHR REUSE"
+eofflag = 2                 /* Return code to indicate end-of-file */
+return_code = 0                /* Initialize return code           */
+in_ctr = 0                     /* Initialize # of lines read       */
+out_ctr = 0                    /* Initialize # of lines written    */
+
+cclength = 15 /*digits without check #*/
+
+do j = 1 to 500
+final_number = calculate_checkdigit(luhn(gen_random(cclength)))
+/* card length calculates random sequence, which is put into the */
+/* luhn algorithm, which is used to calculate the last digit! */
+say final_number
+end
+
+gen_random: /* gererates random numbers based on cclength*/
+    PARSE ARG num_digits
+    ccnum = "000" /* initialize prefix */
+    do k = 1 to num_digits /* generate randoms */
+    ccnum = ccnum || random(0,9) /* concat random # */
+    end
+    RETURN ccnum
+
+luhn: /* get the sum of sums, according to wiki knowledge */
+    PARSE ARG ccn /* take credit card number as parameter*/
+    sum = 0 /* initialize sum */
+    odd = 0 /* initialize odd numbers */
+    DO i=length(ccn) TO 1 BY -1 /* reverse iterate*/
+        c=substr(ccn,i,1) /* go through each digit */
+        IF odd THEN DO /* if it is odd */
+            sum = sum + c
+        END
+        ELSE DO /* if even */
+            doubled = c * 2
+            IF ( doubled > 9 ) THEN DO
+               sum = sum + ( doubled - 9 )
+            END
+            ELSE DO
+                sum = sum + doubled
+            END
+        END
+        odd=\odd /*flip between even and odd*/
+    END
+    RETURN sum
+
+calculate_checkdigit: /* calculates appropriate check digit */
+    PARSE ARG calculated_sum
+    checkdigit = ((calculated_sum * 9) // 10)
+    return ccnum || checkdigit /* concat the # of life */
+
+IF out_ctr > 0 THEN             /* Were any lines written to outdd?*/
+  DO                               /* Yes.  So outdd is now open   */
+     /****************************************************************/
+   /* Since the outdd file is already open at this point, the      */
+   /* following "EXECIO 0 DISKW ..." command will close the file,  */
+   /* but will not empty it of the lines that have already been    */
+   /* written. The data set allocated to outdd will contain out_ctr*/
+   /* lines.                                                       */
+   /****************************************************************/
+
+  "EXECIO 0 DISKW outdd (FINIS" /* Closes the open file, outdd     */
+  SAY 'File outdd now contains ' out_ctr' lines.'
+END
+ELSE                         /* Else no new lines have been        */
+                             /* written to file outdd              */
+  DO                         /* Erase any old records from the file*/
+
+   /****************************************************************/
+   /* Since the outdd file is still closed at this point, the      */
+   /* following "EXECIO 0 DISKW " command will open the file,   */
+   /* write 0 records, and then close it.  This will effectively   */
+   /* empty the data set allocated to outdd.  Any old records that */
+   /* were in this data set when this exec started will now be     */
+   /* deleted.                                                     */
+   /****************************************************************/
+
+   "EXECIO 0 DISKW outdd (OPEN FINIS"  /*Empty the outdd file      */
+   SAY 'File outdd is now empty.'
+   END
+"FREE FI(outdd)"
+EXIT
