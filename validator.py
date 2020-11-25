@@ -43,7 +43,7 @@ def luhn(card_number):
 cc_list = cc_contents.splitlines()      # take that giant string and turn it into a List
 invalid_cc_list = []                    # A second list to hold invalid entries
 for cc_line in cc_list:                 # do everything here for every item in that List
-    cc_digits = int(cc_line[2:21])      # Just grabbing some digits. Not a full CC number (HINT!)/ (SOLVED)
+    cc_digits = int(cc_line[2:21])      # Grabs the full number
     if (luhn(cc_digits)):           # If the card number is INVALID
         invalid_cc_list.append(cc_line) #append to our invalid list
 
